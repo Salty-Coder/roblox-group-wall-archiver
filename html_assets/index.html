@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Roblox Group Wall Archiver</title>
+
+  <link rel="stylesheet" href="assets/style.css">
+
+  <link rel="icon" href="assets/favicon.ico">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <div id="root">
+    <h1>Groups</h1>
+
+
+    {% for group in groups %}
+      <a href="{{ group.path }}" class="preview">
+        <img src="{{ group.thumbnail }}" class="preview-thumbnail">
+        <div class="preview-info">
+          <span class="preview-title">{{ group.name }} 
+            {% if group.verified %}
+            <img src="assets/verified-icon.png" class="verified-icon">
+            {% endif %}
+          </span>
+          <span class="owner-name-container">
+            By {{ group.owner.display_name }} 
+            {% if group.verified %}
+            <img src="assets/verified-icon.png" class="verified-icon">
+            {% endif %}
+            <span class="owner-username"> @{{ group.owner.name }}</span>
+          </span>
+        </div>
+      </a>
+    {% endfor %}
+
+    <p>Archived on {{ archive_date }} with <a href="https://github.com/Salty-Coder/roblox-group-wall-archiver">roblox-group-wall-archiver</a> 💎</p>
+  </div>
+</body>
+</html>

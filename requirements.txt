@@ -1,0 +1,6 @@
+jinja2
+aiofiles
+aiohttp
+typer
+questionary
+python-dateutil
