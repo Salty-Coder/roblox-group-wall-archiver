@@ -490,13 +490,6 @@ async def get_group_walls(
             typer.echo(f"Failed to get some wall posts for group '{group['group']['name']}'.")
 
 
-        for group in groups: 
-            if group["group"]["shout"] == None:
-                groupinfo = await get_custom_group_info(id=group["group"]["id"])     # After adding custom group ID system, i realised having group shout in the data is kinda cool but maybe a little unnecessary
-                group["group"]["shout"] = groupinfo["shout"] if "shout" in groupinfo else None
-                debug(group["group"]["shout"])
-
-
         data = {
             "name": group["group"]["name"],
             "id": group_id,
@@ -514,6 +507,13 @@ async def get_group_walls(
         }
         finaldata[group_id] = data
         #typer.echo(f"Found {len(messages)} messages in group '{group['group']['name']}' (ID: {group_id})")
+
+
+    for group in groups: 
+        if group["group"]["shout"] == None:
+            groupinfo = await get_custom_group_info(id=group["group"]["id"])     # After adding custom group ID system, i realised having group shout in the data is kinda cool but maybe a little unnecessary
+            group["group"]["shout"] = groupinfo["shout"] if "shout" in groupinfo else None
+            debug(group["group"]["shout"])
 
 
     wrapped_data = {
