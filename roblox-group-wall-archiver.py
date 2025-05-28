@@ -30,7 +30,6 @@ index_template = template_environment.get_template("index.html")
 group_template = template_environment.get_template("group.html")
 
 app = typer.Typer()
-#cutoff_date = datetime(2019, 1, 1, tzinfo=timezone.utc)
 
 
 debug_enabled = False  # Set to True to enable debug output
@@ -72,7 +71,7 @@ async def get_group_icons(
         path1: Path,
         path2: Path,
         image_format: ImageFormat,  # webp, png
-        rest_delay: float = 0.8,
+        rest_delay: float = 0.6,
         auth: str = None,
         size: str = "150x150",  # 150x150, 420x420
 ):
@@ -115,14 +114,14 @@ async def get_group_icons(
                 
                 if response.status == 429:
                     if url == primaryurl:
-                        print(f"Rate limiteda. Retrying with proxy API in {delay} seconds...")
+                        print(f"Rate limited. Retrying with proxy API in {round(delay, 2)} seconds...")
                         await asyncio.sleep(delay)
                         url = backupurl
                         cookiestouse = {}
                         delay *= 3
                         attempts_left -= 1
                     else:
-                        print(f"Rate limitedb. Retrying with main API in {delay} seconds...")
+                        print(f"Rate limited. Retrying with main API in {round(delay, 2)} seconds...")
                         await asyncio.sleep(delay)
                         url = primaryurl
                         cookiestouse = {".ROBLOSECURITY": auth} if auth else {}
@@ -131,7 +130,7 @@ async def get_group_icons(
                     continue
 
                 elif response.status != 200:
-                    typer.echo(f"Failed to get some group icons. Status code: {response.status}. Retrying in {delay} seconds...")
+                    typer.echo(f"Failed to get some group icons. Status code: {response.status}. Retrying in {round(delay, 2)} seconds...")
                     await asyncio.sleep(delay)
                     delay *= 3
                     attempts_left -= 5
@@ -139,6 +138,9 @@ async def get_group_icons(
 
                 data = (await response.json())["data"]
                 for item in data:
+                    if item.get("state") != "Completed" or not ("imageUrl" in item and item.get("imageUrl") != None and isinstance(item.get("imageUrl"), str) == True and item.get("imageUrl").startswith("https://tr.rbxcdn.com/")):
+                        debug(f"Skipping a group icon due to invalid state or image URL.")
+                        continue
                     image_url = item["imageUrl"]
                     group_id = item["targetId"]
                     file_path = path1 / f"{group_id}.{image_format.value}"
@@ -192,7 +194,7 @@ async def get_headshots(
         path1: Path,
         path2: Path,
         image_format: ImageFormat,
-        rest_delay: float = 0.8,
+        rest_delay: float = 0.6,
         auth: str = None,
         size: str = "48x48"
 ):
@@ -236,14 +238,14 @@ async def get_headshots(
 
                 if response.status == 429:
                     if url == primaryurl:
-                        print(f"Rate limited. Retrying with proxy API in {delay} seconds...")
+                        print(f"Rate limited. Retrying with proxy API in {round(delay, 2)} seconds...")
                         await asyncio.sleep(delay)
                         url = backupurl
                         cookiestouse = {}
                         delay *= 3
                         attempts_left -= 1
                     else:
-                        print(f"Rate limited. Retrying with main API in {delay} seconds...")
+                        print(f"Rate limited. Retrying with main API in {round(delay, 2)} seconds...")
                         await asyncio.sleep(delay)
                         url = primaryurl
                         cookiestouse = {".ROBLOSECURITY": auth} if auth else {}
@@ -252,7 +254,7 @@ async def get_headshots(
                     continue
 
                 elif response.status != 200:
-                    print(f"Failed to get some headshots. Status code: {response.status}. Retrying in {delay} seconds...")
+                    print(f"Failed to get some headshots. Status code: {response.status}. Retrying in {round(delay, 2)} seconds...")
                     await asyncio.sleep(delay)
                     delay *= 3
                     attempts_left -= 5
@@ -262,6 +264,9 @@ async def get_headshots(
 
                 data = (await response.json())["data"]
                 for item in data:
+                    if item.get("state") != "Completed" or not ("imageUrl" in item and item.get("imageUrl") != None and isinstance(item.get("imageUrl"), str) == True and item.get("imageUrl").startswith("https://tr.rbxcdn.com/30DAY-AvatarHeadshot-")):
+                        debug(f"Skipping a headshot due to invalid state or image URL.")
+                        continue
                     image_url = item["imageUrl"]
                     user_id = item["targetId"]
                     file_path = path1 / f"{user_id}.{image_format.value}"
@@ -363,20 +368,19 @@ async def get_raw_posts(
         group_id: int,
         cursor: str = "",
         page_size: int = 100,
-        rest_delay: float = 0.8,
+        rest_delay: float = 0.6,
+        api_to_use: str = None,
         auth: str = None,
 ):
-    debug(f"Waiting {rest_delay} seconds...")
-
-    await asyncio.sleep(rest_delay)
-
+    debug(f"GETTING RAW POSTS WITH cursor: {cursor}, rest_delay: {rest_delay},")
     delay = rest_delay
     attempts_left = 10
     data = "error"
     
-    primaryurl = f"https://groups.roblox.com/v2/groups/{group_id}/wall/posts?cursor={cursor}&limit={page_size}&sortOrder=Desc"
-    backupurl = f"https://groups.roproxy.com/v2/groups/{group_id}/wall/posts?cursor={cursor}&limit={page_size}&sortOrder=Desc"
-    url = primaryurl
+    primaryapi = f"https://groups.roblox.com/v2/groups/"
+    backupapi = f"https://groups.roproxy.com/v2/groups/"
+    apiweusing = api_to_use or primaryapi
+    url = apiweusing + f"{group_id}/wall/posts?cursor={cursor}&limit={page_size}&sortOrder=Desc"
     cookiestouse = {".ROBLOSECURITY": auth} if auth else {}
     while attempts_left > 0:
         async with session.get(
@@ -388,35 +392,38 @@ async def get_raw_posts(
             debug(f"Requested {url}. Status: {response.status}")
             
             if response.status == 429:
-                    if url == primaryurl:
-                        print(f"Rate limited. Retrying with proxy API in {delay} seconds...")
-                        await asyncio.sleep(delay)
-                        url = backupurl
-                        cookiestouse = {} # I don't trust these proxies idk
-                        delay *= 3  # exponential backoff
-                        attempts_left -= 1
-                    else:
-                        print(f"Rate limited. Retrying with main API in {delay} seconds...")
-                        await asyncio.sleep(delay)
-                        url = primaryurl  # Reset to primary URL for next attempt
-                        cookiestouse = {".ROBLOSECURITY": auth} if auth else {}
-                        delay *= 3
-                        attempts_left -= 1
-                    
-                    continue
+                if apiweusing == primaryapi:
+                    print(f"Rate limited. Retrying with proxy API in {round(delay, 2)} seconds...")
+                    await asyncio.sleep(delay)
+                    apiweusing = backupapi
+                    url = apiweusing + f"{group_id}/wall/posts?cursor={cursor}&limit={page_size}&sortOrder=Desc"
+                    cookiestouse = {} # I don't trust these proxies idk
+                    delay *= 3  # exponential backoff
+                    attempts_left -= 1
+                else:
+                    print(f"Rate limited. Retrying with main API in {round(delay, 2)} seconds...")
+                    await asyncio.sleep(delay)
+                    apiweusing = primaryapi
+                    url = apiweusing + f"{group_id}/wall/posts?cursor={cursor}&limit={page_size}&sortOrder=Desc" # Reset to primary URL for next attempt
+                    cookiestouse = {".ROBLOSECURITY": auth} if auth else {}
+                    delay *= 3
+                    attempts_left -= 1
+                continue
 
             elif response.status != 200:
-                typer.echo(f"Failed to get wall posts. Status code: {response.status}. Retrying in {delay} seconds...")
+                typer.echo(f"Failed to get wall posts. Status code: {response.status}. Retrying in {round(delay, 2)} seconds...")
                 await asyncio.sleep(delay)
                 delay *= 3
                 attempts_left -= 1
                 continue
 
             debug("successfully got some data")
+            delay = max(min(delay / 2, 120), 1)
             data = await response.json()
+            debug(f"next: {data.get('nextPageCursor', 'None')}")
             break
 
-    return data
+    return data,delay,apiweusing
     
 
 
@@ -425,7 +432,7 @@ async def get_group_walls(
     groups: List[dict],
     auth: str,
     first_n,
-    rest_delay: float = 0.8
+    rest_delay: float = 0.6
 ):
 
     finaldata = {}
@@ -445,6 +452,7 @@ async def get_group_walls(
                 first_n = 0
 
 
+    apitouse = None
 
     for group in groups:
         group_id = group["group"]["id"]
@@ -454,41 +462,58 @@ async def get_group_walls(
 
         page_size = 100  # 10, 25, 50, 100
 
-        raw_messages = await get_raw_posts(
+        raw_messages,delaytouse,apitouse1 = await get_raw_posts(
             session=session,
             group_id=group_id,
             cursor="",
             page_size=page_size,
             rest_delay=rest_delay,
-            auth=auth
+            api_to_use=apitouse or None,
         )
         debug("Got first batch of messages.")
+        apitouse = apitouse1
 
 
         messages.extend(raw_messages["data"])
 
+        cursor = raw_messages.get("nextPageCursor") or None
+        debug(f"Initial cursor: {cursor}")
 
-        if raw_messages != "error" and raw_messages["nextPageCursor"] is not None:
-            while raw_messages != "error" and raw_messages["nextPageCursor"]:
-                raw_messages = await get_raw_posts(
+        if raw_messages != "error" and cursor != None:
+            while cursor:
+                await(asyncio.sleep(rest_delay))  # Base rate limit
+                raw_messages2, delaytouse2, apitouse2 = await get_raw_posts(
                     session=session,
                     group_id=group_id,
-                    cursor=raw_messages["nextPageCursor"],
+                    cursor=cursor,
                     page_size=page_size,
-                    rest_delay=rest_delay
+                    rest_delay=delaytouse or rest_delay,
+                    api_to_use=apitouse or None,
                 )
-                messages.extend(raw_messages["data"])
+                if raw_messages2 == "error":
+                    typer.echo(f"Failed to get some wall posts for group '{group['group']['name']}'.")
+                    break
 
+                messages.extend(raw_messages2["data"])
+                cursor = raw_messages2.get("nextPageCursor")
 
+                delaytouse = delaytouse2
+                apitouse = apitouse2
         
+
+        if raw_messages == "error":
+            typer.echo(f"Failed to get some wall posts for group '{group['group']['name']}'.")
 
         
         if first_n > 0:
             messages = messages[-first_n:]  # Discard up to the oldest n messages
 
-        if raw_messages == "error":
-            typer.echo(f"Failed to get some wall posts for group '{group['group']['name']}'.")
+        
 
+        if group["group"]["shout"] == None:
+            groupinfo = await get_custom_group_info(id=group["group"]["id"])     # After adding custom group ID system, i realised having group shout in the data is kinda cool but maybe a little unnecessary
+            group["group"]["shout"] = groupinfo["shout"] if "shout" in groupinfo else None
+            debug(group["group"]["shout"])
 
         data = {
             "name": group["group"]["name"],
@@ -506,14 +531,8 @@ async def get_group_walls(
             "wall": messages
         }
         finaldata[group_id] = data
-        #typer.echo(f"Found {len(messages)} messages in group '{group['group']['name']}' (ID: {group_id})")
+        typer.echo(f"Found {len(messages)} wall posts in group '{group['group']['name']}' (ID: {group_id})")
 
-
-    for group in groups: 
-        if group["group"]["shout"] == None:
-            groupinfo = await get_custom_group_info(id=group["group"]["id"])     # After adding custom group ID system, i realised having group shout in the data is kinda cool but maybe a little unnecessary
-            group["group"]["shout"] = groupinfo["shout"] if "shout" in groupinfo else None
-            debug(group["group"]["shout"])
 
 
     wrapped_data = {
@@ -639,7 +658,7 @@ async def htmlCreation(
 
     placeholder_path = path / "assets" / "placeholder.webp"
     
-    if not rest_delay: rest_delay = 0.8  # Probably a good starting value idk
+    if not rest_delay: rest_delay = 0.6  # Probably a good starting value idk
 
 
     # On second thought, i was actually accidently spamming api, so this bit probably isnt even needed, but pass it as an argument if you really want
