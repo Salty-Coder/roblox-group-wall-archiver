@@ -47,13 +47,7 @@ img.group-thumbnail {
     border-radius: 0%;
 }
 
-.author-info {
-    margin-left: 8px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
+.author-info,
 .preview-info {
     margin-left: 8px;
     display: flex;
@@ -165,6 +159,12 @@ hr.rounded.message-separator {
     margin-bottom: -5px;
     margin-top: 20px;
 }
+
+.hr-margin-adjusted {
+  margin-top: -40px;
+  margin-bottom: 3px;
+}
+
 
 .verified-icon {
     margin-bottom: -2.5px;
