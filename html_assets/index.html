@@ -23,7 +23,7 @@
 
     {% for group in groups %}
       <a href="{{ group.path }}" class="preview">
-        <img src="{{ group.thumbnail }}" class="preview-thumbnail">
+        <img src="{{ group.thumbnail }}" class="preview-thumbnail" loading="lazy">
         <div class="preview-info">
           <span class="preview-title">{{ group.name }} 
             {% if group.verified %}

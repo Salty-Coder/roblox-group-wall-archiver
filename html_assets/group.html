@@ -51,7 +51,7 @@
       <div class="description">
         <span class="section-header">Shout</span><br>
         <div class="preview">
-          <img src="{{ group.shout.poster.headshot }}" class="preview-thumbnail user-thumbnail">
+          <img src="{{ group.shout.poster.headshot }}" class="preview-thumbnail user-thumbnail" loading="lazy">
           <div class="preview-info">
             <a href="{{ group.shout.poster.profile_url }}" class="message-author-name">{{ group.shout.poster.display_name }} 
               {% if group.verified %}
@@ -71,7 +71,7 @@
         {% for message in messages %}
         <hr class="rounded">
         <div class="preview">
-          <img src="{{ message.author.headshot }}" class="preview-thumbnail user-thumbnail">
+          <img src="{{ message.author.headshot }}" class="preview-thumbnail user-thumbnail" loading="lazy">
           <div class="preview-info">
             <a href="{{ message.author.profile_url }}" class="message-author-name">{{ message.author.display_name }} 
               {% if group.verified %}
